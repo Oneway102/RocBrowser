@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+
+
+<com.borqs.browser.SnapshotBar
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:background="@drawable/bg_urlbar">
+    <ImageView
+        android:src="@drawable/ic_search_category_history"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:paddingLeft="8dip" />
+    <ImageButton
+        android:id="@+id/favicon"
+        android:layout_width="52dip"
+        android:layout_height="match_parent"
+        android:paddingLeft="16dip"
+        android:paddingRight="16dip"
+        android:scaleType="fitCenter"
+        style="@style/HoloButton" />
+    <FrameLayout
+        android:id="@+id/toggle_container"
+        android:layout_width="0dip"
+        android:layout_height="match_parent"
+        android:layout_weight="1">
+        <TextView
+            android:id="@+id/title"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:singleLine="true"
+            android:gravity="center_vertical"
+            android:textAppearance="?android:attr/textAppearanceMedium" />
+        <TextView
+            android:id="@+id/date"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:singleLine="true"
+            android:gravity="center_vertical"
+            android:textAppearance="?android:attr/textAppearanceMedium" />
+    </FrameLayout>
+    <ImageButton
+        android:id="@+id/tab_switcher"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:src="@drawable/ic_windows_holo_dark"
+        style="@style/HoloButton" />
+    <ImageButton
+        android:id="@+id/more"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        style="@style/HoloButton"
+        android:gravity="center_vertical"
+        android:src="@drawable/ic_menu_moreoverflow_normal_holo_dark" />
+</com.borqs.browser.SnapshotBar>

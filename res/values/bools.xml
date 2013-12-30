@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <bool name="isTablet">false</bool>
+    <!--  hide the title bar -->
+    <bool name="hide_title">true</bool>
+    <bool name="hide_nav_buttons">true</bool>
+    <!-- Browser menu toggles -->
+    <bool name="menu_show_navigation">true</bool>
+    <bool name="menu_show_bookmarks">true</bool>
+</resources>

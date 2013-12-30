@@ -1,0 +1,34 @@
+package com.borqs.browser;
+
+import org.chromium.content.browser.ContentView;
+import org.chromium.ui.WindowAndroid;
+
+import android.content.Context;
+import android.util.AttributeSet;
+
+
+public class BrowserContentView extends ContentView {
+
+    static ContentView create(Context context, int nativeWebContents,
+            WindowAndroid windowAndroid, AttributeSet attrs, int defStyle,
+            int personality) {
+        return ContentView.newInstance(context, nativeWebContents, windowAndroid,
+                ContentView.PERSONALITY_CHROME);
+    }
+
+    protected BrowserContentView(Context context, int nativeWebContents,
+            WindowAndroid windowAndroid, AttributeSet attrs, int defStyle,
+            int personality) {
+        super(context, nativeWebContents, windowAndroid, attrs, defStyle, personality);
+        // TODO Auto-generated constructor stub
+    }
+
+    int getVisibleTitleHeight() {
+        return 30;
+        
+    }
+    
+    boolean isPrivateBrowsingEnabled() {
+        return false;
+    }
+}

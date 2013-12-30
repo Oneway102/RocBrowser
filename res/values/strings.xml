@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+
+        <string name="app_name">Chrome</string>
+    <string name="url_hint">Type URL Here</string>
+    
+    <string name="media_player_error_title">Cannot play video</string>
+    <string name="media_player_error_text_invalid_progressive_playback">Sorry, this video is not valid for streaming to this device.</string>
+    <string name="media_player_error_text_unknown">Sorry, this video cannot be played.</string>
+    <string name="media_player_error_button">OK</string>
+    <string name="media_player_loading_video">Loading video</string>
+    <string name="accessibility_content_view">Web View</string>
+    
+    <string name="accessibility_datetime_picker_date">Date</string>
+    <string name="accessibility_datetime_picker_time">Time</string>
+    <string name="accessibility_date_picker_month">Month</string>
+    <string name="accessibility_date_picker_year">Year</string>
+
+    <string name="actionbar_share">Share</string>
+    <string name="actionbar_web_search">Web search</string>
+   
+    <string name="date_picker_dialog_title">Set date</string>
+    <string name="date_time_picker_dialog_title">Set date and time</string>
+    <string name="date_picker_dialog_set">Set</string>
+    <string name="date_picker_dialog_clear">Clear</string>
+    <string name="month_picker_dialog_title">Set month</string>
+    
+    <string name="low_memory_error">Unable to complete previous operation due to low memory</string>
+    <string name="opening_file_error">Failed to open selected file</string>
+
+    
+    
+    
+    <string name="rlz_access_point">Y1</string>
+    <string name="dump_nav" translatable="false">Dump navigation cache</string>
+    <string name="menu_preferences">Settings</string>
+    <string name="page_info">Page info</string>
+    <string name="page_info_view">View page info</string>
+    <string name="page_info_address">Address:</string>
+    <string name="tab_bookmarks">Bookmarks</string>
+    <string name="tab_most_visited">Most visited</string>
+    <string name="tab_history">History</string>
+    <string name="tab_snapshots">Saved pages</string>
+    <string name="snapshot_go_live">Go live</string>
+    <string name="menu_save_snapshot">Save for offline reading</string>
+    <string name="ua_switcher_desktop">Request desktop site</string>
+    <string name="share_page">Share page</string>
+    <string name="save_to_bookmarks">Save to bookmarks</string>
+    <string name="bookmarks">Bookmarks</string>
+    <string name="forward">Forward</string>
+    <string name="stop">Stop</string>
+    <string name="reload">Reload</string>
+    <string name="menu_share_url">Share</string>
+    <string name="new_incognito_tab">New incognito tab</string>
+    <string name="new_tab">New tab</string>
+    <string name="title_bar_loading">Loading\u2026</string>
+    <string name="search_hint">Search or type URL</string>
+    <string name="find_on_page">Find on page</string>
+    
+    <string name="accessibility_transition_navscreen">Tab management</string>
+    
+    <!-- Content description for back button [CHAR LIMIT=NONE] -->
+    <string name="accessibility_button_back">Go back</string>
+    <!-- Content description for forward button [CHAR LIMIT=NONE] -->
+    <string name="accessibility_button_forward">Go forward</string>
+    <!-- Content description for refresh button [CHAR LIMIT=NONE] -->
+    <string name="accessibility_button_refresh">Refresh page</string>
+    <!-- Content description for stop button [CHAR LIMIT=NONE] -->
+    <string name="accessibility_button_stop">Stop page load</string>
+    <!-- Content description for add bookmark button [CHAR LIMIT=NONE] -->
+    <string name="accessibility_button_addbookmark">Bookmark page</string>
+    <!-- Content description for search button [CHAR LIMIT=NONE] -->
+    <string name="accessibility_button_search">Search</string>
+    <!-- Content description for voice search button [CHAR LIMIT=NONE] -->
+    <string name="accessibility_button_voice">Start voice search</string>
+    <!-- Content description for bookmarks button [CHAR LIMIT=NONE] -->
+    <string name="accessibility_button_bookmarks">Bookmarks</string>
+    <!-- Content description for close tab button [CHAR LIMIT=NONE] -->
+    <string name="accessibility_button_closetab">Close tab</string>
+    <!-- Content description for new tab button [CHAR LIMIT=NONE] -->
+    <string name="accessibility_button_newtab">Open new tab</string>
+    <!-- Content description for new incognito tab button [CHAR LIMIT=NONE] -->
+    <string name="accessibility_button_newincognitotab">Open new incognito tab</string>
+    <!-- Content description for clear button [CHAR LIMIT=NONE] -->
+    <string name="accessibility_button_clear">Clear input</string>
+    <!-- Content description for user agent switcher [CHAR LIMIT=NONE] -->
+    <string name="accessibility_button_uaswitch">Switch user agent</string>
+    <!-- Content description for go button [CHAR LIMIT=NONE] -->
+    <string name="accessibility_button_go">Go</string>
+    <!-- Content description for tab switcher button [CHAR LIMIT=NONE] -->
+    <string name="accessibility_button_navscreen">Page manager</string>
+    <!-- Content description for overflow menu button [CHAR LIMIT=NONE] -->
+    <string name="accessibility_button_more">More options</string>
+
+    
+    <!-- Chrome browser strings -->
+    <string name="accessibility_js_modal_dialog_prompt">TBD</string>
+    <string name="suppress_js_modal_dialogs">TBD</string>
+    <string name="autofill_fetch_message">TBD</string>
+    <string name="autofill_terms_of_service">TBD</string>
+    <string name="js_modal_dialog_confirm">TBD</string>
+    <string name="reload_this_page">TBD</string>
+    <string name="dont_reload_this_page">TBD</string>
+    <string name="stay_on_this_page">TBD</string>
+    <string name="certtitle">TBD</string>
+    <string name="leave_this_page">TBD</string>
+    <string name="js_modal_dialog_cancel">TBD</string>
+</resources>
