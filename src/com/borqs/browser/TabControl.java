@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Vector;
 
 import org.chromium.content.browser.ContentView;
+import org.chromium.ui.WindowAndroid;
 
 import android.os.Bundle;
 import android.util.Log;
@@ -39,14 +40,19 @@ class TabControl {
 
     private OnThumbnailUpdatedListener mOnThumbnailUpdatedListener;
 
+    WindowAndroid mWindowAndroid;
+    
+    
     /**
      * Construct a new TabControl object
      */
-    TabControl(Controller controller) {
+    TabControl(Controller controller, WindowAndroid windowAndroid) {
         mController = controller;
         mMaxTabs = mController.getMaxTabs();
         mTabs = new ArrayList<Tab>(mMaxTabs);
         mTabQueue = new ArrayList<Tab>(mMaxTabs);
+        
+        mWindowAndroid = windowAndroid;
     }
 
     synchronized static long getNextId() {
@@ -71,7 +77,7 @@ class TabControl {
      * if one exists.
      * @return The top-level WebView of the current tab.
      */
-    ContentView getCurrentTopWebView() {
+    ContentView getCurrentTopContentView() {
         Tab t = getTab(mCurrentTab);
         if (t == null) {
             return null;
@@ -185,11 +191,11 @@ class TabControl {
             return null;
         }
 
-        final ContentView w = createNewWebView(privateBrowsing);
+        // final ContentView w = createNewWebView(privateBrowsing);
 
         // Create a new tab and add it to the tab list
         //Tab t = new Tab(mController, w, state);
-        Tab t = Tab.createTab(mController, w, state);
+        Tab t = Tab.createTab(mController, mWindowAndroid, state);
         mTabs.add(t);
         // Initially put the tab in the background.
         t.putInBackground();
@@ -406,7 +412,7 @@ class TabControl {
                 // Create a new tab and don't restore the state yet, add it
                 // to the tab list
                 //Tab t = new Tab(mController, state);
-                Tab t = Tab.createTab(mController, null, state);
+                Tab t = Tab.createTab(mController, mWindowAndroid, state);
                 tabMap.put(id, t);
                 mTabs.add(t);
                 // added the tab to the front as they are not current
@@ -681,5 +687,26 @@ class TabControl {
 
     public OnThumbnailUpdatedListener getOnThumbnailUpdatedListener() {
         return mOnThumbnailUpdatedListener;
+    }
+
+
+    Tab createTabWithNativeContents(int nativeContentsPtr, boolean privateBrowsing) {
+        int size = mTabs.size();
+        // Return false if we have maxed out on tabs
+        if (!canCreateNewTab()) {
+            return null;
+        }
+
+        // final WebView w = createNewWebView(privateBrowsing);
+
+        // Create a new tab and add it to the tab list
+        Tab t = Tab.createTabWithNativeContents(mController, nativeContentsPtr, 
+        		this.mWindowAndroid,
+        		null);
+        
+        mTabs.add(t);
+        // Initially put the tab in the background.
+        t.putInBackground();
+        return t;
     }
 }

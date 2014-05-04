@@ -8,6 +8,7 @@ import android.app.ActionBar;
 import android.app.Activity;
 import android.content.res.Configuration;
 import android.os.Handler;
+import android.view.KeyEvent;
 import android.view.Menu;
 
 /**
@@ -34,6 +35,10 @@ public class XLargeUi extends BaseUi {
 
     private void setupActionBar() {
         
+    }
+
+    private boolean isTypingKey(KeyEvent evt) {
+        return evt.getUnicodeChar() > 0;
     }
 
     @Override
@@ -155,4 +160,34 @@ public class XLargeUi extends BaseUi {
         // TODO Auto-generated method stub
         
     }
+
+    @Override
+    public boolean dispatchKey(int code, KeyEvent event) {
+        if (mActiveTab != null) {
+            ContentView web = mActiveTab.getWebView();
+            if (event.getAction() == KeyEvent.ACTION_DOWN) {
+                switch (code) {
+                    case KeyEvent.KEYCODE_TAB:
+                    case KeyEvent.KEYCODE_DPAD_UP:
+                    case KeyEvent.KEYCODE_DPAD_LEFT:
+                        if ((web != null) && web.hasFocus() && !mTitleBar.hasFocus()) {
+                            editUrl(false, false);
+                            return true;
+                        }
+                }
+                boolean ctrl = event.hasModifiers(KeyEvent.META_CTRL_ON);
+                if (!ctrl && isTypingKey(event) && !mTitleBar.isEditingUrl()) {
+                    editUrl(true, false);
+                    return mContentView.dispatchKeyEvent(event);
+                }
+            }
+        }
+        return false;
+    }
+
+	@Override
+	public void bookmarkedStatusHasChanged(Tab tab) {
+		// TODO Auto-generated method stub
+		
+	}
 }

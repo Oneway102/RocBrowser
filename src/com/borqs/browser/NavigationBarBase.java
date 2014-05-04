@@ -13,6 +13,7 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.AttributeSet;
+import android.view.KeyEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.View.OnFocusChangeListener;
@@ -88,7 +89,7 @@ public class NavigationBarBase extends LinearLayout implements
     }
 
     void stopEditingUrl() {
-        ContentView currentTopWebView = mUiController.getCurrentTopWebView();
+        ContentView currentTopWebView = mUiController.getCurrentTopContentView();
         if (currentTopWebView != null) {
             currentTopWebView.requestFocus();
         }
@@ -160,9 +161,25 @@ public class NavigationBarBase extends LinearLayout implements
     }
 
     @Override
-    public void onFocusChange(View v, boolean hasFocus) {
-        // TODO Auto-generated method stub
-        
+    public void onFocusChange(View view, boolean hasFocus) {
+        // if losing focus and not in touch mode, leave as is
+        if (hasFocus || view.isInTouchMode() || mUrlInput.needsUpdate()) {
+            setFocusState(hasFocus);
+        }
+        if (hasFocus) {
+            mBaseUi.showTitleBar();
+        } else if (!mUrlInput.needsUpdate()) {
+            mUrlInput.dismissDropDown();
+            mUrlInput.hideIME();
+            if (mUrlInput.getText().length() == 0) {
+                Tab currentTab = mUiController.getTabControl().getCurrentTab();
+                if (currentTab != null) {
+                    setDisplayTitle(currentTab.getUrl());
+                }
+            }
+            mBaseUi.suggestHideTitleBar();
+        }
+        mUrlInput.clearNeedsUpdate();
     }
 
     @Override
@@ -202,15 +219,33 @@ public class NavigationBarBase extends LinearLayout implements
     }
 
     @Override
-    public void onCopySuggestion(String text) {
-        // TODO Auto-generated method stub
-        
-    }
-
-    @Override
     public void onClick(View v) {
         // TODO Auto-generated method stub
         
     }
 
+    /**
+     * callback from the suggestion dropdown
+     * copy text to input field and stay in edit mode
+     */
+    @Override
+    public void onCopySuggestion(String text) {
+        mUrlInput.setText(text, true);
+        if (text != null) {
+            mUrlInput.setSelection(text.length());
+        }
+    }
+
+    public void setCurrentUrlIsBookmark(boolean isBookmark) {
+    }
+
+    @Override
+    public boolean dispatchKeyEventPreIme(KeyEvent evt) {
+        if (evt.getKeyCode() == KeyEvent.KEYCODE_BACK) {
+            // catch back key in order to do slightly more cleanup than usual
+            stopEditingUrl();
+            return true;
+        }
+        return super.dispatchKeyEventPreIme(evt);
+    }
 }

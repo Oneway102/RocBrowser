@@ -17,6 +17,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -173,7 +174,7 @@ public class PhoneUi extends BaseUi {
         ImageView target = tabview.mImage;
         int toLeft = 0;
 //ww        int toTop = (tab.getWebView() != null) ? ((BrowserContentView)tab.getWebView()).getVisibleTitleHeight() : 0;
-        int toTop = (tab.getWebView() != null) ? 30 : 0;
+        int toTop = (tab.getWebView() != null) ? TitleBar.getTitleHeight() : 0;
         int toRight = mContentView.getWidth();
         int width = target.getDrawable().getIntrinsicWidth();
         int height = target.getDrawable().getIntrinsicHeight();
@@ -242,12 +243,6 @@ public class PhoneUi extends BaseUi {
     }
 
     @Override
-    public void onConfigurationChanged(Configuration config) {
-        // TODO Auto-generated method stub
-        
-    }
-
-    @Override
     public boolean onBackKey() {
         if (showingNavScreen()) {
             mNavScreen.close(mUiController.getTabControl().getCurrentPosition());
@@ -258,7 +253,6 @@ public class PhoneUi extends BaseUi {
 
     @Override
     public boolean needsRestoreAllTabs() {
-        // TODO Auto-generated method stub
         return false;
     }
 
@@ -417,26 +411,50 @@ public class PhoneUi extends BaseUi {
     }
 
     @Override
-    public void onPageStopped(Tab tab) {
-        // TODO Auto-generated method stub
-        
-    }
-
-    @Override
     public void onProgressChanged(Tab tab) {
-        // TODO Auto-generated method stub
-        
+        super.onProgressChanged(tab);
+        if (mNavScreen == null && getTitleBar().getHeight() > 0) {
+            mHandler.sendEmptyMessage(MSG_INIT_NAVSCREEN);
+        }
     }
 
     @Override
-    public void showMaxTabsWarning() {
-        // TODO Auto-generated method stub
-        
+    public boolean dispatchKey(int code, KeyEvent event) {
+        return false;
     }
 
     @Override
-    public void onTabDataChanged(Tab tab) {
-        // TODO Auto-generated method stub
-        
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        updateMenuState(mActiveTab, menu);
+        return true;
     }
+
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (showingNavScreen()
+                && (item.getItemId() != R.id.history_menu_id)
+                && (item.getItemId() != R.id.snapshots_menu_id)) {
+            hideNavScreen(mUiController.getTabControl().getCurrentPosition(), false);
+        }
+        return false;
+    }
+
+    @Override
+    public void onContextMenuCreated(Menu menu) {
+        hideTitleBar();
+    }
+
+    @Override
+    public void onContextMenuClosed(Menu menu, boolean inLoad) {
+        if (inLoad) {
+            showTitleBar();
+        }
+    }
+
+	@Override
+	public void bookmarkedStatusHasChanged(Tab tab) {
+		// TODO Auto-generated method stub
+		
+	}
 }

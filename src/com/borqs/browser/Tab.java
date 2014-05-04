@@ -1,5 +1,6 @@
 package com.borqs.browser;
 
+import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Vector;
 
@@ -12,7 +13,6 @@ import org.chromium.content.browser.ContentViewRenderView;
 import org.chromium.content.browser.LoadUrlParams;
 import org.chromium.content.common.CleanupReference;
 import org.chromium.ui.WindowAndroid;
-
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -21,16 +21,19 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
+import android.graphics.Rect;
 import android.net.http.SslError;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.os.SystemClock;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.webkit.URLUtil;
 import android.widget.FrameLayout;
 
-class Tab extends TestShellTab {
+public class Tab extends TestShellTab {
 
 
     // Log Tag
@@ -85,7 +88,7 @@ class Tab extends TestShellTab {
     protected ContentViewController mWebViewController;
 
     private WindowAndroid mWindowAndroid;
-    private int mNativeTabPtr;
+    // private int mNativeTabPtr;
 
     // The tab ID
     private long mId = -1;
@@ -145,6 +148,9 @@ class Tab extends TestShellTab {
     private Handler mHandler;
     private boolean mUpdateThumbnail;
 
+	// AsyncTask for downloading touch icons
+	DownloadTouchIcon mTouchIconLoader;
+	
     // All the state needed for a page
     protected static class PageState {
         String mUrl;
@@ -197,33 +203,36 @@ class Tab extends TestShellTab {
     }
 
     // Construct a new tab
-    static Tab createTab(ContentViewController c, ContentView v, Bundle state) {
+    static Tab createTab(ContentViewController c, WindowAndroid window, Bundle state) {
         //WindowAndroid w = new WindowAndroid(c.getActivity());
-        return new Tab(c, v, state);
+        return new Tab(c, window, state);
     }
 
-    private Tab(ContentViewController wvcontroller, ContentView v) {
-        this(wvcontroller, v, null);
+    // Construct a new tab
+    static Tab createTabWithNativeContents(ContentViewController c, int nativeContentes, WindowAndroid window, Bundle state) {
+        //WindowAndroid w = new WindowAndroid(c.getActivity());
+        return new Tab(c, nativeContentes, window, state);
+    }
+    
+    private Tab(ContentViewController wvcontroller, WindowAndroid window) {
+        this(wvcontroller, 0, window, null);
     }
 
-    private Tab(ContentViewController wvcontroller, Bundle state) {
-        this(wvcontroller, null, state);
-    }
-
-    private Tab(ContentViewController wvcontroller, ContentView v, Bundle state) {
-        super(v.getWindowAndroid());
+    private Tab(ContentViewController wvcontroller, WindowAndroid window, Bundle state) {
+        super(wvcontroller.getContext(), window);
+        
         mWebViewController = wvcontroller;
         mContext = mWebViewController.getContext();
         mSettings = BrowserSettings.getInstance();
-//        mDataController = DataController.getInstance(mContext);
-//        mCurrentState = new PageState(mContext, w != null
-//                ? w.isPrivateBrowsingEnabled() : false);
+        mDataController = DataController.getInstance(mContext);
+        mCurrentState = new PageState(mContext, false/*TODO*/);
         mInPageLoad = false;
         mInForeground = false;
 
         //mContentView = v;
-        init();
-
+        // init();
+        initClient();
+        
         mCaptureWidth = mContext.getResources().getDimensionPixelSize(
                 R.dimen.tab_thumbnail_width);
         mCaptureHeight = mContext.getResources().getDimensionPixelSize(
@@ -233,7 +242,7 @@ class Tab extends TestShellTab {
         if (getId() == -1) {
             mId = TabControl.getNextId();
         }
-        setContentView(v);
+        setContentView(getContentView());
         mHandler = new Handler() {
             @Override
             public void handleMessage(Message m) {
@@ -246,23 +255,43 @@ class Tab extends TestShellTab {
         };
     }
 
-    /*
-     * Init chrome tab and the stuffs.
-     */
-    private void init() {
-        int nativeWebContentsPtr = ContentViewUtil.createNativeWebContents(false);
-        // Build the WebContents and the ContentView/ContentViewCore
-        mNativeTabPtr = nativeInit(nativeWebContentsPtr,
-                getWindowAndroid().getNativePointer());
+    private Tab(ContentViewController wvcontroller, int nativeContents, WindowAndroid window, Bundle state) {
+        super(wvcontroller.getContext(), nativeContents, window);
 
-        // Build the WebContentsDelegate
-        mWebContentsClient = new WebContentsClient();
-        nativeInitWebContentsDelegate(mNativeTabPtr, mWebContentsClient);
+        mWebViewController = wvcontroller;
+        mContext = mWebViewController.getContext();
+        mSettings = BrowserSettings.getInstance();
+//        mDataController = DataController.getInstance(mContext);
+        mCurrentState = new PageState(mContext, false/*TODO*/);
+        mInPageLoad = false;
+        mInForeground = false;
 
-        // To be called after everything is initialized.
-        mCleanupReference = new CleanupReference(this, 
-                new DestroyRunnable(mNativeTabPtr));
+        //mContentView = v;
+        // init();
+        initClient();
+        
+        mCaptureWidth = mContext.getResources().getDimensionPixelSize(
+                R.dimen.tab_thumbnail_width);
+        mCaptureHeight = mContext.getResources().getDimensionPixelSize(
+                R.dimen.tab_thumbnail_height);
+        updateShouldCaptureThumbnails();
+        restoreState(state);
+        if (getId() == -1) {
+            mId = TabControl.getNextId();
+        }
+        setContentView(getContentView());
+        mHandler = new Handler() {
+            @Override
+            public void handleMessage(Message m) {
+                switch (m.what) {
+                case MSG_CAPTURE:
+                    capture();
+                    break;
+                }
+            }
+        };
     }
+    
 
     ContentViewRenderView getRenderView() {
         // Create the renderview.
@@ -543,6 +572,10 @@ class Tab extends TestShellTab {
         }
     }
 
+    public boolean shouldUpdateThumbnail() {
+        //return false;
+        return mUpdateThumbnail;
+    }
 
     /**
      * Set the parent tab of this tab.
@@ -601,17 +634,6 @@ class Tab extends TestShellTab {
         return mChildren;
     }
 
-    void resume() {
-        if (mMainView != null) {
-            setupHwAcceleration(mMainView);
-            // ww
-//            mMainView.onResume();
-            if (mSubView != null) {
-//                mSubView.onResume();
-            }
-        }
-    }
-
     private void setupHwAcceleration(View web) {
 /*
         if (web == null) return;
@@ -622,17 +644,26 @@ class Tab extends TestShellTab {
             web.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
         }*/
     }
+    
 
-    void pause() {
-        if (mMainView != null) {
-            // ww
-//            mMainView.onPause();
-            if (mSubView != null) {
-//                mSubView.onPause();
-            }
-        }
-    }
+	void pause() {
+		if (this.mMainView != null) {
+			mMainView.onActivityPause();
+			if (mSubView != null) {
+				mSubView.onActivityPause();
+			}
+		}
+	}
 
+	void resume() {
+		if (this.mMainView != null) { 
+			mMainView.onActivityResume();
+			if (mSubView != null) {
+				mSubView.onActivityResume();
+			}
+		}
+	}
+	
     void putInForeground() {
         if (mInForeground) {
             return;
@@ -754,9 +785,15 @@ class Tab extends TestShellTab {
     }
 
     public Bitmap getScreenshot() {
+        /* TODO: need a proper scale here.
         synchronized (Tab.this) {
             return mCapture;
+        }*/
+        if (mMainView == null) return null;
+        if (mMainView.getWidth() <= 0 || mMainView.getContentHeight() <= 0) {
+            return null;
         }
+        return mMainView.getBitmap(mCaptureWidth, mCaptureHeight);
     }
 
     public boolean isSnapshot() {
@@ -782,7 +819,7 @@ class Tab extends TestShellTab {
             mWebViewController.onPageStarted(this, mMainView, null);
             // ww mMainView.loadUrl(url, headers);
             LoadUrlParams params = new LoadUrlParams(url);
-            params.setExtraHeaders(headers);
+            if (headers != null) params.setExtraHeaders(headers);
             mMainView.loadUrl(params);
         }
     }
@@ -837,25 +874,113 @@ class Tab extends TestShellTab {
         }
     }
 
-    private class WebContentsClient
+    public class WebContentsClient
             extends ChromeWebContentsDelegateAndroid {
         @Override
-        public void onLoadProgressChanged(int progress) {
+        public void onLoadProgressChanged(int newProgress) {
+            mPageLoadProgress = newProgress;
+            if (newProgress == 100) {
+                mInPageLoad = false;
+            }
+            mWebViewController.onProgressChanged(Tab.this);
+            if (mUpdateThumbnail && newProgress == 100) {
+                mUpdateThumbnail = false;
+            }
         }
 
         @Override
         public void onUpdateUrl(String url) {
-            // TODO ww
+            if (mCurrentState != null) {
+                mCurrentState.mUrl = url;
+            }
         }
 
         @Override
         public void onLoadStarted() {
             mInPageLoad = true;
+            mInPageLoad = true;
+            mUpdateThumbnail = true;
+            mPageLoadProgress = INITIAL_PROGRESS;
+            mCurrentState = new PageState(mContext,
+                    false, getWebView().getUrl(), null/*TODO*/);
+            mLoadStartTime = SystemClock.uptimeMillis();
+
+            // If we start a touch icon load and then load a new page, we don't
+            // want to cancel the current touch icon loader. But, we do want to
+            // create a new one when the touch icon url is known.
+            if (mTouchIconLoader != null) {
+                mTouchIconLoader.mTab = null;
+                mTouchIconLoader = null;
+            }
+/*
+            // reset the error console
+            if (mErrorConsole != null) {
+                mErrorConsole.clearErrorMessages();
+                if (mWebViewController.shouldShowErrorConsole()) {
+                    mErrorConsole.showConsole(ErrorConsoleView.SHOW_NONE);
+                }
+            }
+*/
+            // finally update the UI in the activity if it is in the foreground
+            mWebViewController.onPageStarted(Tab.this, Tab.this.getWebView(), null);
+
+            updateBookmarkedStatus();
         }
 
         @Override
         public void onLoadStopped() {
             mInPageLoad = false;
         }
+
+        @Override
+        public void onTitleUpdated() {
+            if (mCurrentState != null) {
+                mCurrentState.mTitle = getWebView().getTitle();
+            }
+        }
+        
+    	@Override
+    	public boolean addNewContents(int nativeSourceWebContents, int nativeWebContents,
+    			int disposition, Rect initialPosition, boolean userGesture) {
+    		return Tab.this.mWebViewController.createTabWitNativeContents(null, Tab.this, true, false, nativeWebContents); 
+    		// return mTab.onCreateWindow(nativeSourceWebContents, nativeWebContents, disposition, initialPosition, userGesture);
+    	}
     }
+
+    public void initClient() {
+        // Build the WebContentsDelegate
+        mWebContentsClient = new WebContentsClient();
+        setWebContentsDelegate(mWebContentsClient);
+    }
+ 
+	private DataController mDataController;
+	public void updateBookmarkedStatus() {
+		mDataController.queryBookmarkStatus(getUrl(), mIsBookmarkCallback);
+	}
+	private DataController.OnQueryUrlIsBookmark mIsBookmarkCallback
+	= new DataController.OnQueryUrlIsBookmark() {
+		@Override
+		public void onQueryUrlIsBookmark(String url, boolean isBookmark) {
+			if (mCurrentState.mUrl.equals(url)) {
+				mCurrentState.mIsBookmarkedSite = isBookmark;
+				Tab.this.mWebViewController.bookmarkedStatusHasChanged(Tab.this);
+			}
+		}
+	};
+	void updateCaptureFromBlob(byte[] blob) {
+		synchronized (Tab.this) {
+			if (mCapture == null) {
+				return;
+			}
+			ByteBuffer buffer = ByteBuffer.wrap(blob);
+			try {
+				mCapture.copyPixelsFromBuffer(buffer);
+			} catch (RuntimeException rex) {
+				Log.e(LOGTAG, "Load capture has mismatched sizes; buffer: "
+						+ buffer.capacity() + " blob: " + blob.length
+						+ "capture: " + mCapture.getByteCount());
+				throw rex;
+			}
+		}
+	}
 }

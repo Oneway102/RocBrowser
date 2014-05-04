@@ -824,6 +824,16 @@ public class ContentView extends FrameLayout
         return mContentViewCore.computeVerticalScrollRange();
     }
 
+    public String getTouchIconUrl() {
+        return null;
+    }
+    public Bitmap getFavicon() {
+    	return null;
+    }
+    public int getContentWidth() {
+        return mContentViewCore.computeHorizontalScrollRange();
+    }
+
     ///////////////////////////////////////////////////////////////////////////////////////////////
     //              Start Implementation of ContentViewCore.InternalAccessDelegate               //
     ///////////////////////////////////////////////////////////////////////////////////////////////

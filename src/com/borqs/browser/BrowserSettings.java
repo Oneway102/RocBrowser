@@ -54,4 +54,9 @@ public class BrowserSettings implements OnSharedPreferenceChangeListener {
     boolean openInBackground() {
         return false;
     }
+
+    public void setLastRunPaused(boolean b) {
+        // TODO Auto-generated method stub
+        
+    }
 }

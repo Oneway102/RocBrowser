@@ -16,6 +16,8 @@ import org.chromium.content.browser.LoadUrlParams;
 import org.chromium.content.common.CleanupReference;
 import org.chromium.ui.WindowAndroid;
 
+import com.borqs.browser.Tab.WebContentsClient;
+
 /**
  * TestShell's implementation of a tab. This mirrors how Chrome for Android subclasses
  * and extends {@link TabBase}.
@@ -37,8 +39,21 @@ public class TestShellTab extends TabBase {
      * of TestShellTab's native JNI methods.
      * @param window   The WindowAndroid should represent this tab.
      */
-    public TestShellTab(WindowAndroid window) {
+    public TestShellTab(Context context, WindowAndroid window) {
         super(window);
+        init(context);
+    }
+    
+    /**
+     * @param context  The Context the view is running in.
+     * @param url      The URL to start this tab with.
+     * @param window   The WindowAndroid should represent this tab.
+     */
+    public TestShellTab(Context context, int navtiveContentsPtr,
+    		WindowAndroid window) {
+        super(window);
+        init(context, navtiveContentsPtr);
+        // loadUrlWithSanitization(url);
     }
 
     /**
@@ -64,14 +79,28 @@ public class TestShellTab extends TabBase {
                 getWindowAndroid().getNativePointer());
 
         // Build the WebContentsDelegate
-        mWebContentsDelegate = new TabBaseChromeWebContentsDelegateAndroid();
-        nativeInitWebContentsDelegate(mNativeTestShellTab, mWebContentsDelegate);
+        // mWebContentsDelegate = new TabBaseChromeWebContentsDelegateAndroid();
+        // nativeInitWebContentsDelegate(mNativeTestShellTab, mWebContentsDelegate);
 
         // To be called after everything is initialized.
         mCleanupReference = new CleanupReference(this,
                 new DestroyRunnable(mNativeTestShellTab));
     }
 
+    private void init(Context context, int navtiveContentsPtr) {
+        // Build the WebContents and the ContentView/ContentViewCore
+        // int nativeWebContentsPtr = ContentViewUtil.createNativeWebContents(isIncongnito);
+        mContentView = ContentView.newInstance(context, navtiveContentsPtr, 
+        		getWindowAndroid(),
+                ContentView.PERSONALITY_CHROME);
+
+    	mNativeTestShellTab = nativeInit(navtiveContentsPtr, getWindowAndroid().getNativePointer());
+
+        // To be called after everything is initialized.
+        mCleanupReference = new CleanupReference(this,
+                new DestroyRunnable(mNativeTestShellTab));
+    }
+    
     /**
      * Should be called when the tab is no longer needed.  Once this is called this tab should not
      * be used.
@@ -112,7 +141,7 @@ public class TestShellTab extends TabBase {
     /**
      * @return The {@link ContentView} represented by this tab.
      */
-    ContentView getContentView() {
+    public ContentView getContentView() {
         return mContentView;
     }
 
@@ -142,6 +171,13 @@ public class TestShellTab extends TabBase {
         } else {
             mContentView.loadUrl(new LoadUrlParams(url));
         }
+    }
+    
+    public void setWebContentsDelegate(WebContentsClient webContentsClient) {
+    	if (mNativeTestShellTab == 0) {
+    		return;
+    	}
+        nativeInitWebContentsDelegate(mNativeTestShellTab, webContentsClient);
     }
 
     private static final class DestroyRunnable implements Runnable {

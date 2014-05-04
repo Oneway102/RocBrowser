@@ -55,7 +55,7 @@ public class AndroidBrowserProcess {
     // - 1: The incognito New Tab Page
     // - 1: A regular incognito tab
     public static final int MAX_RENDERERS_LIMIT =
-        ChildProcessLauncher.MAX_REGISTERED_SANDBOXED_SERVICES - 4;
+        ChildProcessLauncher.MAX_REGISTERED_SANDBOXED_SERVICES - 3;
 
     /**
      * Initialize the process as a ContentView host. This must be called from the main UI thread.

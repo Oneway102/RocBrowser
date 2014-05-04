@@ -73,9 +73,8 @@ public class UrlInputView extends AutoCompleteTextView
     }
 
     public UrlInputView(Context context, AttributeSet attrs) {
-        // ww
-        //this(context, attrs, R.attr.autoCompleteTextViewStyle);
-        this(context, attrs, 0);
+        this(context, attrs, android.R.attr.autoCompleteTextViewStyle);
+        //this(context, attrs, 0);
         //this(context, attrs);
     }
 

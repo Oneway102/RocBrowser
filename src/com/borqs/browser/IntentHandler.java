@@ -150,7 +150,6 @@ public class IntentHandler {
             } else {
                 if (!urlData.isEmpty()
                         && urlData.mUrl.startsWith("about:debug")) {
-                }
                 /* ww
                     if ("about:debug.dom".equals(urlData.mUrl)) {
                         current.getWebViewClassic().dumpDomTree(false);
@@ -176,7 +175,8 @@ public class IntentHandler {
                 // no longer associated with that application.
                 current.setAppId(null);
                 mController.loadUrlDataIn(current, urlData);
-            }        
+            }
+        }
     }
 
     protected static UrlData getUrlDataFromIntent(Intent intent) {
