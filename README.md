@@ -3,6 +3,9 @@ RocBrowser
 
 Android stock browser based on chromium engine.
 
+==============================================================================
+
+
 In order to run the app, please build Chromuium@r197479 (chromium.r197479.tgz) and reuse the engine lib.
 
 You may follow Chromium build guide and run the following command line to generate libchromiumtestshell.so:
