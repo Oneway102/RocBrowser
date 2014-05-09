@@ -72,4 +72,8 @@ public interface UiController {
     Tab openTabToHomePage();
 
     void bookmarkCurrentPage();
+    
+    void openPreferences();
+    
+    ContentView getCurrentTopWebView();
 }

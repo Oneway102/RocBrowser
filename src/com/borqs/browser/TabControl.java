@@ -643,6 +643,7 @@ class TabControl {
      * If force is true, this method skips the check for newTab == current.
      */
     private boolean setCurrentTab(Tab newTab, boolean force) {
+    	Log.i("TabControl", "setCurrentTab");
         Tab current = getTab(mCurrentTab);
         if (current == newTab && !force) {
             return true;
@@ -665,11 +666,18 @@ class TabControl {
         // Display the new current tab
         mCurrentTab = mTabs.indexOf(newTab);
         ContentView mainView = newTab.getWebView();
+        if( mainView != null ) {
+        	final BrowserSettings s = BrowserSettings.getInstance();
+        	s.startManagingSettings(mainView.getContentSettings());
+        }
+        Log.i("TabControl", "setCurrentTab, " + mainView.getContentSettings().getJavaScriptEnabled());
         boolean needRestore = !newTab.isSnapshot() && (mainView == null);
         if (needRestore) {
+        	Log.i("TabControl", "setCurrentTab, needRestore");
             // Same work as in createNewTab() except don't do new Tab()
             mainView = createNewWebView();
-            newTab.setWebView(mainView);
+            //newTab.setWebView(mainView);
+            newTab.setContentView(mainView);
         }
         newTab.putInForeground();
         return true;
@@ -708,5 +716,18 @@ class TabControl {
         // Initially put the tab in the background.
         t.putInBackground();
         return t;
+    }
+    
+    /**
+     * Return the current tab's top-level WebView. This can return a subwindow
+     * if one exists.
+     * @return The top-level WebView of the current tab.
+     */
+    ContentView getCurrentTopWebView() {
+        Tab t = getTab(mCurrentTab);
+        if (t == null) {
+            return null;
+        }
+        return t.getTopWindow();
     }
 }

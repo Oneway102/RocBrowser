@@ -108,5 +108,10 @@ public class PreloadController implements ContentViewController {
 		// TODO Auto-generated method stub
 		
 	}
+	
+	@Override
+    public void createSubWindow(Tab tab) {
+		// TODO Auto-generated method stub
+    }
 
 }

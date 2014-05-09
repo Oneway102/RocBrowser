@@ -2,6 +2,10 @@ package com.borqs.browser;
 
 import com.borqs.browser.SuggestionsAdapter.CompletionListener;
 import com.borqs.browser.SuggestionsAdapter.SuggestItem;
+import com.borqs.browser.search.SearchEngine;
+import com.borqs.browser.search.SearchEngineInfo;
+import com.borqs.browser.search.SearchEngines;
+
 
 import android.content.Context;
 import android.content.res.Configuration;
@@ -23,6 +27,7 @@ import android.widget.AutoCompleteTextView;
 import android.widget.TextView;
 import android.widget.TextView.OnEditorActionListener;
 
+import android.util.Log;
 
 /**
  * url/search input view
@@ -234,25 +239,31 @@ public class UrlInputView extends AutoCompleteTextView
     }
 
     private void finishInput(String url, String extra, String source) {
+    	Log.i("UrlInputView", "finishInput");
         mNeedsUpdate = true;
         dismissDropDown();
         mInputManager.hideSoftInputFromWindow(getWindowToken(), 0);
         if (TextUtils.isEmpty(url)) {
+        	Log.i("UrlInputView", "finishInput 1");
             mListener.onDismiss();
         } else {
-            if (mIncognitoMode && isSearch(url)) {
+        	Log.i("UrlInputView", "finishInput 2");
+        	Log.i("UrlInputView", "finishInput, 2, mIncognitoMode: " + mIncognitoMode);
+        	Log.i("UrlInputView", "finishInput 2, isSearch(url): " + isSearch(url));
+            //if (mIncognitoMode && isSearch(url)) {
+        	if (isSearch(url)) {
                 // To prevent logging, intercept this request
                 // TODO: This is a quick hack, refactor this
-/*ww
+
                 SearchEngine searchEngine = BrowserSettings.getInstance()
                         .getSearchEngine();
                 if (searchEngine == null) return;
                 SearchEngineInfo engineInfo = SearchEngines
-                        .getSearchEngineInfo(mContext, searchEngine.getName());
+                        .getSearchEngineInfo(super.getContext(), searchEngine.getName());
                 if (engineInfo == null) return;
                 url = engineInfo.getSearchUriForQuery(url);
+                Log.i("UrlInputView", "finishInput, url: " + url);
                 // mLister.onAction can take it from here without logging
-*/
             }
             mListener.onAction(url, extra, source);
         }

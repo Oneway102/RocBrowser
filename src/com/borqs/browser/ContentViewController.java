@@ -39,4 +39,6 @@ interface ContentViewController {
             boolean useCurrent, int nativeContentsPtr);
     
     void bookmarkedStatusHasChanged(Tab tab);
+    
+    void createSubWindow(Tab tab);
 }

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical" >
+
+    <LinearLayout
+        android:id="@+id/combo_button_layout"
+        android:layout_width="fill_parent"
+        android:layout_height="48dip"
+        android:layout_alignParentTop="true"
+        android:orientation="horizontal" >
+
+
+        <ImageButton
+            android:id="@+id/bookmark_button"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:src="@drawable/bookmark_logo"
+            android:background="@android:color/transparent"
+            android:layout_weight="1" >
+        </ImageButton>
+        <ImageButton
+            android:id="@+id/history_button"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:src="@drawable/history_logo"
+            android:background="@android:color/transparent"
+            android:layout_weight="1" >
+        </ImageButton>
+        <ImageButton
+            android:id="@+id/snapshot_button"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:src="@drawable/offline_logo"
+            android:background="@android:color/transparent"
+            android:layout_weight="1" >
+        </ImageButton>
+    </LinearLayout>
+
+    <com.borqs.browser.combo.ScrollLayout
+        android:id="@+id/combo_root"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_below="@+id/combo_button_layout" >
+    </com.borqs.browser.combo.ScrollLayout>
+
+</RelativeLayout>

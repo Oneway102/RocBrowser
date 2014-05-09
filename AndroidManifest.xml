@@ -27,6 +27,7 @@
     <uses-permission android:name="com.borqs.browser.permission.WRITE_HISTORY_BOOKMARKS"/>
         <uses-permission android:name="android.permission.READ_SYNC_STATS" />
     <uses-permission android:name="android.permission.READ_SYNC_SETTINGS"/>
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
     
     <application
         android:name="Browser"
@@ -84,6 +85,13 @@
         <activity android:name=".combo.BrowserHistoryPage" >
         </activity>
         <activity android:name=".combo.BrowserSnapshotPage" >
+        </activity>
+
+        <activity android:name="BrowserPreferencesPage" android:label="@string/menu_preferences">
+            <intent-filter>
+                <action android:name="android.intent.action.MANAGE_NETWORK_USAGE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
         
         <!--

@@ -57,7 +57,7 @@ public class Controller
 
     // activity requestCode
     final static int COMBO_VIEW = 1;
-    final static int PREFERENCES_PAGE = 3;
+    public final static int PREFERENCES_PAGE = 3;
     final static int FILE_SELECTED = 4;
     final static int AUTOFILL_SETUP = 5;
     final static int VOICE_RESULT = 6;
@@ -93,6 +93,8 @@ public class Controller
     private ActionMode mActionMode;
 
     private boolean mBlockEvents;
+    
+    private boolean mShouldShowErrorConsole;
 
     public Controller(Activity browser, WindowAndroid windowAndroid) {
         mActivity = browser;
@@ -102,6 +104,7 @@ public class Controller
         mUrlHandler = new UrlHandler(this);
         mIntentHandler = new IntentHandler(mActivity, this);
         mFactory = new MyContentViewFactory(browser);
+        //mFactory = new BrowserWebViewFactory(browser);
 
         startHandler();
     }
@@ -663,7 +666,11 @@ public class Controller
             case R.id.add_bookmark_menu_id:
                 bookmarkCurrentPage();
                 break;
-
+                
+            case R.id.preferences_menu_id:
+            	Log.i("Controller", "R.id.preferences_menu_id");
+                openPreferences();
+                break;
 
             default:
                 return false;
@@ -671,7 +678,13 @@ public class Controller
         return true;
     }
 
-    
+    @Override
+    public void openPreferences() {
+        Intent intent = new Intent(mActivity, BrowserPreferencesPage.class);
+        intent.putExtra(BrowserPreferencesPage.CURRENT_PAGE,
+                getCurrentTopWebView().getUrl());
+        mActivity.startActivityForResult(intent, PREFERENCES_PAGE);
+    }
 
     @Override
     public void bookmarkCurrentPage() {
@@ -1359,5 +1372,31 @@ public class Controller
         mUi.bookmarkedStatusHasChanged(tab);
 	}
  
-
+	// Helper method for getting the top window.
+    @Override
+    public ContentView getCurrentTopWebView() {
+        return mTabControl.getCurrentTopWebView();
+    }
+    
+    protected void setShouldShowErrorConsole(boolean show) {
+        if (show == mShouldShowErrorConsole) {
+            // Nothing to do.
+            return;
+        }
+        mShouldShowErrorConsole = show;
+        Tab t = mTabControl.getCurrentTab();
+        if (t == null) {
+            // There is no current tab so we cannot toggle the error console
+            return;
+        }
+        mUi.setShouldShowErrorConsole(t, show);
+    }
+    
+    @Override
+    public void createSubWindow(Tab tab) {
+        endActionMode();
+        ContentView mainView = tab.getWebView();
+        ContentView subView = mFactory.createContentView(true);
+        mUi.createSubWindow(tab, subView);
+    }
 }

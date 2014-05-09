@@ -101,6 +101,12 @@ public interface UI {
     public void onContextMenuCreated(Menu menu);
 
     public void onContextMenuClosed(Menu menu, boolean inLoad);
+    
     void bookmarkedStatusHasChanged(Tab tab);
+    
     public void showComboView(ComboViews startingView, Bundle extra);
+    
+    public void setShouldShowErrorConsole(Tab tab, boolean show);
+    
+    void setFullscreen(boolean enabled);
 }

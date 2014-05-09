@@ -130,7 +130,7 @@ public class Tab extends TestShellTab {
     // Keep the original url around to avoid killing the old WebView if the url
     // has not changed.
     // Error console for the tab
-//    private ErrorConsoleView mErrorConsole;
+    private ErrorConsoleView mErrorConsole;
     // The listener that gets invoked when a download is started from the
     // mMainView
 //    private final DownloadListener mDownloadListener;
@@ -443,7 +443,7 @@ public class Tab extends TestShellTab {
     }
 
     void setWebView(ContentView w) {
-        setWebView(w);
+    	setContentView(w, true);
     }
 
     void setContentView(ContentView w) {
@@ -983,4 +983,20 @@ public class Tab extends TestShellTab {
 			}
 		}
 	}
+	
+	/**
+     * Return the tab's error console. Creates the console if createIfNEcessary
+     * is true and we haven't already created the console.
+     * @param createIfNecessary Flag to indicate if the console should be
+     *            created if it has not been already.
+     * @return The tab's error console, or null if one has not been created and
+     *         createIfNecessary is false.
+     */
+    ErrorConsoleView getErrorConsole(boolean createIfNecessary) {
+        if (createIfNecessary && mErrorConsole == null) {
+            mErrorConsole = new ErrorConsoleView(mContext);
+            mErrorConsole.setWebView(mMainView);
+        }
+        return mErrorConsole;
+    }
 }

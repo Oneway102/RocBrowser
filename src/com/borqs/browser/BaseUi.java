@@ -119,8 +119,8 @@ public abstract class BaseUi implements UI {
 				R.id.fullscreen_custom_content);
 		//        mErrorConsoleContainer = (LinearLayout) frameLayout
 				//                .findViewById(R.id.error_console);
-		//        setFullscreen(BrowserSettings.getInstance().useFullscreen());
-		setFullscreen(false);
+		 setFullscreen(BrowserSettings.getInstance().useFullscreen());
+		//setFullscreen(false);
 		mGenericFavicon = res.getDrawable(
 				R.drawable.app_web_browser_sm);
 		mTitleBar = new TitleBar(mActivity, mUiController, this,
@@ -761,4 +761,29 @@ public abstract class BaseUi implements UI {
 
 		 }
 	 }
+	 
+	 @Override
+	    public void setShouldShowErrorConsole(Tab tab, boolean flag) {
+	        if (tab == null) return;
+	        ErrorConsoleView errorConsole = tab.getErrorConsole(true);
+	        if (flag) {
+	            // Setting the show state of the console will cause it's the layout
+	            // to be inflated.
+	            if (errorConsole.numberOfErrors() > 0) {
+	                errorConsole.showConsole(ErrorConsoleView.SHOW_MINIMIZED);
+	            } else {
+	                errorConsole.showConsole(ErrorConsoleView.SHOW_NONE);
+	            }
+	            if (errorConsole.getParent() != null) {
+	                mErrorConsoleContainer.removeView(errorConsole);
+	            }
+	            // Now we can add it to the main view.
+	            mErrorConsoleContainer.addView(errorConsole,
+	                    new LinearLayout.LayoutParams(
+	                            ViewGroup.LayoutParams.MATCH_PARENT,
+	                            ViewGroup.LayoutParams.WRAP_CONTENT));
+	        } else {
+	            mErrorConsoleContainer.removeView(errorConsole);
+	        }
+	    }
 }
