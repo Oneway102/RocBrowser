@@ -13,3 +13,7 @@ You may follow Chromium build guide and run the following command line to genera
     * ninja -C out/Release -j10 chromium_testshell
 
 and put it under "/libs/armeabi-v7a/" according to your target.
+
+==============================================================================
+
+Bookmark, History and Settings were part of "develop" branch.
