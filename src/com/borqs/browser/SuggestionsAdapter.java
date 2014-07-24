@@ -3,7 +3,7 @@ package com.borqs.browser;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.borqs.browser.provider.BrowserProvider2.OmniboxSuggestions;
+import com.borqs.browser.provider.BrowsingProvider.OmniboxSuggestions;
 
 import android.app.SearchManager;
 import android.content.Context;

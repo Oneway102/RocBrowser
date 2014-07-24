@@ -20,7 +20,7 @@ public interface UiController {
 
     ContentView getCurrentWebView();
 
-    ContentView getCurrentTopWebView();
+    ContentView getCurrentTopContentView();
 
     Tab getCurrentTab();
 
@@ -70,4 +70,10 @@ public interface UiController {
     void bookmarksOrHistoryPicker(ComboViews startView);
 
     Tab openTabToHomePage();
+
+    void bookmarkCurrentPage();
+    
+    void openPreferences();
+    
+    ContentView getCurrentTopWebView();
 }

@@ -96,4 +96,22 @@ public class PreloadController implements ContentViewController {
         
     }
 
+	@Override
+	public boolean createTabWitNativeContents(String url, Tab parent,
+			boolean setActive, boolean useCurrent, int nativeContentsPtr) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public void bookmarkedStatusHasChanged(Tab tab) {
+		// TODO Auto-generated method stub
+		
+	}
+	
+	@Override
+    public void createSubWindow(Tab tab) {
+		// TODO Auto-generated method stub
+    }
+
 }

@@ -3,7 +3,6 @@ package com.borqs.browser;
 import java.util.List;
 
 import org.chromium.content.browser.ContentView;
-
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.os.Bundle;
@@ -84,4 +83,30 @@ public interface UI {
     void showMaxTabsWarning();
 
     public void onTabDataChanged(Tab tab);
+
+    boolean dispatchKey(int code, KeyEvent event);
+
+    public boolean onPrepareOptionsMenu(Menu menu);
+
+    public void onOptionsMenuOpened();
+
+    public void onExtendedMenuOpened();
+
+    public boolean onOptionsItemSelected(MenuItem item);
+
+    public void onOptionsMenuClosed(boolean inLoad);
+
+    public void onExtendedMenuClosed(boolean inLoad);
+
+    public void onContextMenuCreated(Menu menu);
+
+    public void onContextMenuClosed(Menu menu, boolean inLoad);
+    
+    void bookmarkedStatusHasChanged(Tab tab);
+    
+    public void showComboView(ComboViews startingView, Bundle extra);
+    
+    public void setShouldShowErrorConsole(Tab tab, boolean show);
+    
+    void setFullscreen(boolean enabled);
 }

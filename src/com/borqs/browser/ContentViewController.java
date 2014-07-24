@@ -33,4 +33,12 @@ interface ContentViewController {
     void onReceivedTitle(Tab tab, final String title);
 
     void onUpdatedSecurityState(Tab tab);
+    
+    
+    boolean createTabWitNativeContents(String url, Tab parent, boolean setActive,
+            boolean useCurrent, int nativeContentsPtr);
+    
+    void bookmarkedStatusHasChanged(Tab tab);
+    
+    void createSubWindow(Tab tab);
 }

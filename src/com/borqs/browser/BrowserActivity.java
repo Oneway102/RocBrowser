@@ -1,17 +1,22 @@
 
 package com.borqs.browser;
 
+import org.chromium.base.ActivityStatus;
 import org.chromium.content.app.LibraryLoader;
 import org.chromium.content.browser.AndroidBrowserProcess;
 import org.chromium.content.browser.DeviceUtils;
 import org.chromium.content.common.CommandLine;
 import org.chromium.content.common.ProcessInitException;
+import org.chromium.ui.WindowAndroid;
 
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.KeyEvent;
+import android.view.Menu;
+import android.view.MenuItem;
 
 
 public class BrowserActivity extends Activity {
@@ -30,6 +35,9 @@ public class BrowserActivity extends Activity {
 
     private ActivityController mController;
 
+    private WindowAndroid mWindow;
+    
+    
     @Override
     public void onCreate(Bundle icicle) {
         if (LOGV_ENABLED) {
@@ -65,6 +73,9 @@ public class BrowserActivity extends Activity {
             finish();
         }
 
+        mWindow = new WindowAndroid(this);
+        mWindow.restoreInstanceState(icicle);
+        
         // If this was a web search request, pass it on to the default web
         // search provider and finish this activity.
         if (IntentHandler.handleWebSearchIntent(this, null, getIntent())) {
@@ -95,7 +106,7 @@ public class BrowserActivity extends Activity {
     }
 
     private Controller createController() {
-        Controller controller = new Controller(this);
+        Controller controller = new Controller(this, this.mWindow);
         boolean xlarge = isTablet(this);
         UI ui = null;
         if (xlarge) {
@@ -109,5 +120,88 @@ public class BrowserActivity extends Activity {
 
     private boolean shouldIgnoreIntents() {
         return false;
+    }
+
+    ///////////////
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        return mController.onKeyDown(keyCode, event) ||
+            super.onKeyDown(keyCode, event);
+    }
+
+    @Override
+    public boolean onKeyLongPress(int keyCode, KeyEvent event) {
+        return mController.onKeyLongPress(keyCode, event) ||
+            super.onKeyLongPress(keyCode, event);
+    }
+
+    @Override
+    public boolean onKeyUp(int keyCode, KeyEvent event) {
+        return mController.onKeyUp(keyCode, event) ||
+            super.onKeyUp(keyCode, event);
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        super.onCreateOptionsMenu(menu);
+        return mController.onCreateOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        super.onPrepareOptionsMenu(menu);
+        return mController.onPrepareOptionsMenu(menu);
+    }
+
+
+    /**
+     *  onSaveInstanceState(Bundle map)
+     *  onSaveInstanceState is called right before onStop(). The map contains
+     *  the saved state.
+     */
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        if (LOGV_ENABLED) {
+            Log.v(LOGTAG, "BrowserActivity.onSaveInstanceState: this=" + this);
+        }
+        mController.onSaveInstanceState(outState);
+        mWindow.saveInstanceState(outState);
+    }
+    
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode,
+            Intent intent) {
+        // mController.onActivityResult(requestCode, resultCode, intent);
+        mWindow.onActivityResult(requestCode, resultCode, intent);
+    }
+ 
+
+    @Override
+    protected void onPause() {
+        mController.onPause();
+        ActivityStatus.onStateChange(this, ActivityStatus.PAUSED);
+        // ((ChromeMobileApplication)getApplicationContext()).setChromeInForeground(false);
+        super.onPause();
+    }
+    
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (LOGV_ENABLED) {
+            Log.v(LOGTAG, "BrowserActivity.onResume: this=" + this);
+        }
+        mController.onResume();
+        
+        ActivityStatus.onStateChange(this, ActivityStatus.RESUMED);
+    }
+
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (!mController.onOptionsItemSelected(item)) {
+            return super.onOptionsItemSelected(item);
+        }
+        return true;
     }
 }

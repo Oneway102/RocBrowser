@@ -626,4 +626,10 @@ public class ContentVideoView extends FrameLayout implements MediaPlayerControl,
     private native void nativePlay(int nativeContentVideoView);
     private native void nativeSeekTo(int nativeContentVideoView, int msec);
     private native void nativeSetSurface(int nativeContentVideoView, Surface surface);
+
+	@Override
+	public int getAudioSessionId() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
 }

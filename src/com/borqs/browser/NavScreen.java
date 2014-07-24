@@ -57,8 +57,8 @@ Context mContext;
 
     public NavScreen(Activity activity, UiController ctl, PhoneUi ui) {
         super(activity);
-        mContext = mActivity;
         mActivity = activity;
+        mContext = mActivity;
         mUiController = ctl;
         mUi = ui;
         mOrientation = activity.getResources().getConfiguration().orientation;

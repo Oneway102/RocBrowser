@@ -4,23 +4,33 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.chromium.content.browser.ContentSettings;
 import org.chromium.content.browser.ContentView;
-
+import org.chromium.ui.WindowAndroid;
 import com.borqs.browser.IntentHandler.UrlData;
 import com.borqs.browser.UI.ComboViews;
-
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.os.PowerManager;
+import android.text.TextUtils;
+import android.util.Log;
 import android.view.ActionMode;
+import android.view.ContextMenu;
+import android.view.ContextMenu.ContextMenuInfo;
+import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
 
 
 /**
@@ -28,6 +38,8 @@ import android.view.MenuItem;
  */
 public class Controller
         implements ContentViewController, UiController, ActivityController {
+
+    private static final String LOGTAG = "Controller";
 
     // public message ids
     public final static int LOAD_URL = 1001;
@@ -45,7 +57,7 @@ public class Controller
 
     // activity requestCode
     final static int COMBO_VIEW = 1;
-    final static int PREFERENCES_PAGE = 3;
+    public final static int PREFERENCES_PAGE = 3;
     final static int FILE_SELECTED = 4;
     final static int AUTOFILL_SETUP = 5;
     final static int VOICE_RESULT = 6;
@@ -69,18 +81,30 @@ public class Controller
 
     private boolean mMenuIsDown;
 
+    // FIXME, temp address onPrepareMenu performance problem.
+    // When we move everything out of view, we should rewrite this.
+    private int mCurrentMenuState = 0;
+    private int mMenuState = R.id.MAIN_MENU;
+    private int mOldMenuState = EMPTY_MENU;
+    private Menu mCachedMenu;
+
     // For select and find, we keep track of the ActionMode so that
     // finish() can be called as desired.
     private ActionMode mActionMode;
 
-    public Controller(Activity browser) {
+    private boolean mBlockEvents;
+    
+    private boolean mShouldShowErrorConsole;
+
+    public Controller(Activity browser, WindowAndroid windowAndroid) {
         mActivity = browser;
         mSettings = BrowserSettings.getInstance();
-        mTabControl = new TabControl(this);
+        mTabControl = new TabControl(this, windowAndroid);
 //        mSettings.setController(this);
         mUrlHandler = new UrlHandler(this);
         mIntentHandler = new IntentHandler(mActivity, this);
         mFactory = new MyContentViewFactory(browser);
+        //mFactory = new BrowserWebViewFactory(browser);
 
         startHandler();
     }
@@ -227,6 +251,69 @@ public class Controller
         return mMenuIsDown;
     }
 
+    // key handling
+    protected void onBackKey() {
+        if (!mUi.onBackKey()) {
+            ContentView subwindow = mTabControl.getCurrentSubWindow();
+            if (subwindow != null) {
+                if (subwindow.canGoBack()) {
+                    subwindow.goBack();
+                } else {
+                    dismissSubWindow(mTabControl.getCurrentTab());
+                }
+            } else {
+                goBackOnePageOrQuit();
+            }
+        }
+    }
+
+    protected boolean onMenuKey() {
+        return mUi.onMenuKey();
+    }
+
+    void goBackOnePageOrQuit() {
+        Tab current = mTabControl.getCurrentTab();
+        if (current == null) {
+            /*
+             * Instead of finishing the activity, simply push this to the back
+             * of the stack and let ActivityManager to choose the foreground
+             * activity. As BrowserActivity is singleTask, it will be always the
+             * root of the task. So we can use either true or false for
+             * moveTaskToBack().
+             */
+            mActivity.moveTaskToBack(true);
+            return;
+        }
+        if (current.canGoBack()) {
+            current.goBack();
+        } else {
+            // Check to see if we are closing a window that was created by
+            // another window. If so, we switch back to that window.
+            Tab parent = current.getParent();
+            if (parent != null) {
+                switchToTab(parent);
+                // Now we close the other tab
+                closeTab(current);
+            } else {
+                if ((current.getAppId() != null) || current.closeOnBack()) {
+                    closeCurrentTab(true);
+                }
+                /*
+                 * Instead of finishing the activity, simply push this to the back
+                 * of the stack and let ActivityManager to choose the foreground
+                 * activity. As BrowserActivity is singleTask, it will be always the
+                 * root of the task. So we can use either true or false for
+                 * moveTaskToBack().
+                 */
+                mActivity.moveTaskToBack(true);
+            }
+        }
+    }
+
+    boolean didUserStopLoading() {
+        return mLoadStopped;
+    }
+
     @Override
     public UI getUi() {
         return mUi;
@@ -238,9 +325,8 @@ public class Controller
     }
 
     @Override
-    public ContentView getCurrentTopWebView() {
-        // TODO Auto-generated method stub
-        return null;
+    public ContentView getCurrentTopContentView() {
+        return mTabControl.getCurrentTopContentView();
     }
 
     @Override
@@ -338,6 +424,63 @@ public class Controller
         }
     }
     
+    boolean isMenuOrCtrlKey(int keyCode) {
+        return (KeyEvent.KEYCODE_MENU == keyCode)
+                || (KeyEvent.KEYCODE_CTRL_LEFT == keyCode)
+                || (KeyEvent.KEYCODE_CTRL_RIGHT == keyCode);
+    }
+
+    /**
+     * helper method for key handler
+     * returns the current tab if it can't advance
+     */
+    private Tab getNextTab() {
+        int pos = mTabControl.getCurrentPosition() + 1;
+        if (pos >= mTabControl.getTabCount()) {
+            pos = 0;
+        }
+        return mTabControl.getTab(pos);
+    }
+
+    /**
+     * helper method for key handler
+     * returns the current tab if it can't advance
+     */
+    private Tab getPrevTab() {
+        int pos  = mTabControl.getCurrentPosition() - 1;
+        if ( pos < 0) {
+            pos = mTabControl.getTabCount() - 1;
+        }
+        return  mTabControl.getTab(pos);
+    }
+
+    protected void pageUp() {
+//        getCurrentTopWebView().pageUp(false);
+    }
+
+    protected void pageDown() {
+//        getCurrentTopWebView().pageDown(false);
+    }
+
+    /**
+     * As the menu can be open when loading state changes
+     * we must manually update the state of the stop/reload menu
+     * item
+     */
+    private void updateInLoadMenuItems(Menu menu, Tab tab) {
+        if (menu == null) {
+            return;
+        }
+        MenuItem dest = menu.findItem(R.id.stop_reload_menu_id);
+        MenuItem src = ((tab != null) && tab.inPageLoad()) ?
+                menu.findItem(R.id.stop_menu_id):
+                menu.findItem(R.id.reload_menu_id);
+        if (src != null) {
+            dest.setIcon(src.getIcon());
+            dest.setTitle(src.getTitle());
+        }
+    }
+
     @Override
     public void onSaveInstanceState(Bundle outState) {
         // TODO Auto-generated method stub
@@ -354,8 +497,29 @@ public class Controller
 
     @Override
     public void onResume() {
-        // TODO Auto-generated method stub
-        
+        if (!mActivityPaused) {
+            Log.e(LOGTAG, "BrowserActivity is already resumed.");
+            return;
+        }
+        mSettings.setLastRunPaused(false);
+        mActivityPaused = false;
+        Tab current = mTabControl.getCurrentTab();
+        if (current != null) {
+            current.resume();
+//            resumeWebViewTimers(current);
+        }
+        releaseWakeLock();
+
+        mUi.onResume();
+        /*
+        mNetworkHandler.onResume();
+        WebView.enablePlatformNotifications();
+        NfcHandler.register(mActivity, this);
+        if (mVoiceResult != null) {
+            mUi.onVoiceResult(mVoiceResult);
+            mVoiceResult = null;
+        }
+        */
     }
 
     @Override
@@ -379,7 +543,16 @@ public class Controller
     @Override
     public void onPause() {
         // TODO Auto-generated method stub
-        
+        if (mActivityPaused) {
+            Log.e(LOGTAG, "BrowserActivity is already paused.");
+            return;
+        }
+        mActivityPaused = true;
+        Tab tab = mTabControl.getCurrentTab();
+        if (tab != null) {
+            tab.pause();
+        }
+        mUi.onPause();
     }
 
     @Override
@@ -431,7 +604,7 @@ public class Controller
     public void attachSubWindow(Tab tab) {
         if (tab.getSubContentView() != null) {
             mUi.attachSubWindow(tab.getSubContentView());
-            getCurrentTopWebView().requestFocus();
+            getCurrentTopContentView().requestFocus();
         }
     }
 
@@ -454,7 +627,7 @@ public class Controller
     public void stopLoading() {
         mLoadStopped = true;
         Tab tab = mTabControl.getCurrentTab();
-        ContentView w = getCurrentTopWebView();
+        ContentView w = getCurrentTopContentView();
         if (w != null) {
             w.stopLoading();
             mUi.onPageStopped(tab);
@@ -463,14 +636,142 @@ public class Controller
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // TODO Auto-generated method stub
-        return false;
+        if (null == getCurrentTopContentView()) {
+            return false;
+        }
+        if (mMenuIsDown) {
+            // The shortcut action consumes the MENU. Even if it is still down,
+            // it won't trigger the next shortcut action. In the case of the
+            // shortcut action triggering a new activity, like Bookmarks, we
+            // won't get onKeyUp for MENU. So it is important to reset it here.
+            mMenuIsDown = false;
+        }
+        if (mUi.onOptionsItemSelected(item)) {
+            // ui callback handled it
+            return true;
+        }
+        switch (item.getItemId()) {
+            case R.id.bookmarks_menu_id:
+                bookmarksOrHistoryPicker(ComboViews.Bookmarks);
+                break;
+
+            case R.id.history_menu_id:
+                bookmarksOrHistoryPicker(ComboViews.History);
+                break;
+
+            case R.id.snapshots_menu_id:
+                bookmarksOrHistoryPicker(ComboViews.Snapshots);
+                break;
+
+            case R.id.add_bookmark_menu_id:
+                bookmarkCurrentPage();
+                break;
+                
+            case R.id.preferences_menu_id:
+            	Log.i("Controller", "R.id.preferences_menu_id");
+                openPreferences();
+                break;
+
+            default:
+                return false;
+        }
+        return true;
     }
 
     @Override
+    public void openPreferences() {
+        Intent intent = new Intent(mActivity, BrowserPreferencesPage.class);
+        intent.putExtra(BrowserPreferencesPage.CURRENT_PAGE,
+                getCurrentTopWebView().getUrl());
+        mActivity.startActivityForResult(intent, PREFERENCES_PAGE);
+    }
+
+    @Override
+    public void bookmarkCurrentPage() {
+        Intent bookmarkIntent = createBookmarkCurrentPageIntent(false);
+        if (bookmarkIntent != null) {
+            mActivity.startActivity(bookmarkIntent);
+        }
+    }
+
+    public Intent createBookmarkCurrentPageIntent(boolean editExisting) {
+        ContentView w = getCurrentTopContentView();
+        if (w == null) {
+            return null;
+        }
+        Intent i = new Intent(mActivity,
+                AddBookmarkPage.class);
+        i.putExtra(BrowserContract.Bookmarks.URL, w.getUrl());
+        i.putExtra(BrowserContract.Bookmarks.TITLE, w.getTitle());
+        String touchIconUrl = w.getTouchIconUrl();
+        if (touchIconUrl != null) {
+            i.putExtra(AddBookmarkPage.TOUCH_ICON_URL, touchIconUrl);
+        }
+
+        i.putExtra(BrowserContract.Bookmarks.THUMBNAIL,
+                createScreenshot(w, getDesiredThumbnailWidth(mActivity),
+                getDesiredThumbnailHeight(mActivity)));
+        i.putExtra(BrowserContract.Bookmarks.FAVICON, w.getFavicon());
+        if (editExisting) {
+            i.putExtra(AddBookmarkPage.CHECK_FOR_DUPE, true);
+        }
+        // Put the dialog at the upper right of the screen, covering the
+        // star on the title bar.
+        i.putExtra("gravity", Gravity.RIGHT | Gravity.TOP);
+        return i;
+    }
+    
+    static int getDesiredThumbnailWidth(Context context) {
+        return context.getResources().getDimensionPixelOffset(
+                R.dimen.bookmarkThumbnailWidth);
+    }
+
+    static int getDesiredThumbnailHeight(Context context) {
+        return context.getResources().getDimensionPixelOffset(
+                R.dimen.bookmarkThumbnailHeight);
+    }
+    private static Bitmap sThumbnailBitmap;
+    static Bitmap createScreenshot(ContentView view, int width, int height) {
+        if (view == null || view.getContentHeight() == 0
+                || view.getContentWidth() == 0) {
+            return null;
+        }
+        // We render to a bitmap 2x the desired size so that we can then
+        // re-scale it with filtering since canvas.scale doesn't filter
+        // This helps reduce aliasing at the cost of being slightly blurry
+        final int filter_scale = 2;
+        int scaledWidth = width * filter_scale;
+        int scaledHeight = height * filter_scale;
+        if (sThumbnailBitmap == null || sThumbnailBitmap.getWidth() != scaledWidth
+                || sThumbnailBitmap.getHeight() != scaledHeight) {
+            if (sThumbnailBitmap != null) {
+                sThumbnailBitmap.recycle();
+                sThumbnailBitmap = null;
+            }
+            sThumbnailBitmap =
+                    Bitmap.createBitmap(scaledWidth, scaledHeight, Bitmap.Config.RGB_565);
+        }
+        Canvas canvas = new Canvas(sThumbnailBitmap);
+        int contentWidth = view.getContentWidth();
+        float overviewScale = scaledWidth / (view.getScale() * contentWidth);
+/*
+        if (view instanceof BrowserContentView) {
+            int dy = -((BrowserContentView)view).getTitleHeight();
+            canvas.translate(0, dy * overviewScale);
+        }
+*/
+        canvas.scale(overviewScale, overviewScale);
+
+        view.draw(canvas);
+        Bitmap ret = Bitmap.createScaledBitmap(sThumbnailBitmap,
+                width, height, true);
+        canvas.setBitmap(null);
+        return ret;
+    }
+    
+    @Override
     public void setBlockEvents(boolean block) {
-        // TODO Auto-generated method stub
-        
+        mBlockEvents = block;
     }
 
     // open a non inconito tab with the given url data
@@ -714,7 +1015,7 @@ public class Controller
         removeSubWindow(tab);
         // dismiss the subwindow. This will destroy the WebView.
         tab.dismissSubWindow();
-        ContentView wv = getCurrentTopWebView();
+        ContentView wv = getCurrentTopContentView();
         if (wv != null) {
             wv.requestFocus();
         }
@@ -781,8 +1082,50 @@ public class Controller
 
     @Override
     public void onProgressChanged(Tab tab) {
-        // TODO Auto-generated method stub
-        
+        int newProgress = tab.getLoadProgress();
+
+        if (newProgress == 100) {
+//            CookieSyncManager.getInstance().sync();
+            // onProgressChanged() may continue to be called after the main
+            // frame has finished loading, as any remaining sub frames continue
+            // to load. We'll only get called once though with newProgress as
+            // 100 when everything is loaded. (onPageFinished is called once
+            // when the main frame completes loading regardless of the state of
+            // any sub frames so calls to onProgressChanges may continue after
+            // onPageFinished has executed)
+            if (tab.inPageLoad()) {
+                updateInLoadMenuItems(mCachedMenu, tab);
+            } else if (mActivityPaused && pauseWebViewTimers(tab)) {
+                // pause the WebView timer and release the wake lock if it is
+                // finished while BrowserActivity is in pause state.
+                releaseWakeLock();
+            }
+            if (!tab.isPrivateBrowsingEnabled()
+                    && !TextUtils.isEmpty(tab.getUrl())
+                    && !tab.isSnapshot()) {
+                // Only update the bookmark screenshot if the user did not
+                // cancel the load early and there is not already
+                // a pending update for the tab.
+                if (tab.shouldUpdateThumbnail() &&
+                        (tab.inForeground() && !didUserStopLoading()
+                        || !tab.inForeground())) {
+                    if (!mHandler.hasMessages(UPDATE_BOOKMARK_THUMBNAIL, tab)) {
+                        mHandler.sendMessageDelayed(mHandler.obtainMessage(
+                                UPDATE_BOOKMARK_THUMBNAIL, 0, 0, tab),
+                                500);
+                    }
+                }
+            }
+        } else {
+            if (!tab.inPageLoad()) {
+                // onPageFinished may have already been called but a subframe is
+                // still loading
+                // updating the progress and
+                // update the menu items.
+                updateInLoadMenuItems(mCachedMenu, tab);
+            }
+        }
+        mUi.onProgressChanged(tab);
     }
 
     @Override
@@ -793,8 +1136,18 @@ public class Controller
 
     @Override
     public void bookmarksOrHistoryPicker(ComboViews startView) {
-        // TODO Auto-generated method stub
-        
+        if (mTabControl.getCurrentContentView() == null) {
+            return;
+        }
+        // clear action mode
+        if (isInCustomActionMode()) {
+            endActionMode();
+        }
+        Bundle extras = new Bundle();
+        // Disable opening in a new window if we have maxed out the windows
+        extras.putBoolean(BrowserBookmarksPage.EXTRA_DISABLE_WINDOW,
+                !mTabControl.canCreateNewTab());
+        mUi.showComboView(startView, extras);
     }
 
     @Override
@@ -805,5 +1158,245 @@ public class Controller
     @Override
     public void onUpdatedSecurityState(Tab tab) {
         mUi.onTabDataChanged(tab);
+    }
+
+    /**
+     * handle key events in browser
+     *
+     * @param keyCode
+     * @param event
+     * @return true if handled, false to pass to super
+     */
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        boolean noModifiers = event.hasNoModifiers();
+        // Even if MENU is already held down, we need to call to super to open
+        // the IME on long press.
+        if (!noModifiers && isMenuOrCtrlKey(keyCode)) {
+            mMenuIsDown = true;
+            return false;
+        }
+
+        ContentView webView = getCurrentTopContentView();
+        Tab tab = getCurrentTab();
+        if (webView == null || tab == null) return false;
+
+        boolean ctrl = event.hasModifiers(KeyEvent.META_CTRL_ON);
+        boolean shift = event.hasModifiers(KeyEvent.META_SHIFT_ON);
+
+        switch(keyCode) {
+            case KeyEvent.KEYCODE_TAB:
+                if (event.isCtrlPressed()) {
+                    if (event.isShiftPressed()) {
+                        // prev tab
+                        switchToTab(getPrevTab());
+                    } else {
+                        // next tab
+                        switchToTab(getNextTab());
+                    }
+                    return true;
+                }
+                break;
+            case KeyEvent.KEYCODE_SPACE:
+                // WebView/WebTextView handle the keys in the KeyDown. As
+                // the Activity's shortcut keys are only handled when WebView
+                // doesn't, have to do it in onKeyDown instead of onKeyUp.
+                if (shift) {
+                    pageUp();
+                } else if (noModifiers) {
+                    pageDown();
+                }
+                return true;
+            case KeyEvent.KEYCODE_BACK:
+                if (!noModifiers) break;
+                event.startTracking();
+                return true;
+            case KeyEvent.KEYCODE_FORWARD:
+                if (!noModifiers) break;
+                tab.goForward();
+                return true;
+            case KeyEvent.KEYCODE_DPAD_LEFT:
+                if (ctrl) {
+                    tab.goBack();
+                    return true;
+                }
+                break;
+            case KeyEvent.KEYCODE_DPAD_RIGHT:
+                if (ctrl) {
+                    tab.goForward();
+                    return true;
+                }
+                break;
+        }
+        // it is a regular key and webview is not null
+         return mUi.dispatchKey(keyCode, event);
+    }
+
+    @Override
+    public boolean onKeyLongPress(int keyCode, KeyEvent event) {
+        switch(keyCode) {
+        case KeyEvent.KEYCODE_BACK:
+            if (mUi.isWebShowing()) {
+                bookmarksOrHistoryPicker(ComboViews.History);
+                return true;
+            }
+            break;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean onKeyUp(int keyCode, KeyEvent event) {
+        if (isMenuOrCtrlKey(keyCode)) {
+            mMenuIsDown = false;
+            if (KeyEvent.KEYCODE_MENU == keyCode
+                    && event.isTracking() && !event.isCanceled()) {
+                return onMenuKey();
+            }
+        }
+        if (!event.hasNoModifiers()) return false;
+        switch(keyCode) {
+            case KeyEvent.KEYCODE_BACK:
+                if (event.isTracking() && !event.isCanceled()) {
+                    onBackKey();
+                    return true;
+                }
+                break;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        if (mMenuState == EMPTY_MENU) {
+            return false;
+        }
+        MenuInflater inflater = mActivity.getMenuInflater();
+        inflater.inflate(R.menu.browser, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        updateInLoadMenuItems(menu, getCurrentTab());
+        // hold on to the menu reference here; it is used by the page callbacks
+        // to update the menu based on loading state
+        mCachedMenu = menu;
+        // Note: setVisible will decide whether an item is visible; while
+        // setEnabled() will decide whether an item is enabled, which also means
+        // whether the matching shortcut key will function.
+        switch (mMenuState) {
+            case EMPTY_MENU:
+                if (mCurrentMenuState != mMenuState) {
+                    menu.setGroupVisible(R.id.MAIN_MENU, false);
+                    menu.setGroupEnabled(R.id.MAIN_MENU, false);
+                    menu.setGroupEnabled(R.id.MAIN_SHORTCUT_MENU, false);
+                }
+                break;
+            default:
+                if (mCurrentMenuState != mMenuState) {
+                    menu.setGroupVisible(R.id.MAIN_MENU, true);
+                    menu.setGroupEnabled(R.id.MAIN_MENU, true);
+                    menu.setGroupEnabled(R.id.MAIN_SHORTCUT_MENU, true);
+                }
+                updateMenuState(getCurrentTab(), menu);
+                break;
+        }
+        mCurrentMenuState = mMenuState;
+        return mUi.onPrepareOptionsMenu(menu);
+    }
+
+    @Override
+    public void onCreateContextMenu(ContextMenu menu, View v,
+            ContextMenuInfo menuInfo) {
+        // TODO Auto-generated method stub
+        
+    }
+
+    @Override
+    public boolean onContextItemSelected(MenuItem item) {
+        // TODO Auto-generated method stub
+        return false;
+    }
+
+
+    public boolean createTabWitNativeContents(String url, Tab parent, boolean setActive,
+            boolean useCurrent, int nativeContentsPtr) {
+        return ((openTabWithNativeContentsPtr(url, (parent != null) && parent.isPrivateBrowsingEnabled(), 
+        		setActive, false, parent, nativeContentsPtr)) != null);
+    }
+    public Tab openTabWithNativeContentsPtr(String url, boolean incognito, 
+    		boolean setActive,
+            boolean useCurrent, Tab parent,
+            int nativeContentsPtr) {
+        Tab tab = createNewTabWithNativeContents(incognito, setActive, 
+        		useCurrent, nativeContentsPtr);
+        if (tab != null) {
+            if (parent != null && parent != tab && !parent.isSnapshot()) {
+                parent.addChildTab(tab);
+            }
+            // do not loadUrl here, because url will be loaded in native, WebContentsImpl
+            /*
+            if (url != null) {
+                loadUrl(tab, url);
+            }
+            */
+        }
+        return tab;
+    }
+    private Tab createNewTabWithNativeContents(boolean incognito, boolean setActive,
+            boolean useCurrent, int nativeContentsPtr) {
+        Tab tab = null;
+        if (mTabControl.canCreateNewTab()) {
+            tab = mTabControl.createTabWithNativeContents(nativeContentsPtr, incognito);
+            addTab(tab);
+            if (setActive) {
+                setActiveTab(tab);
+            }
+        } else {
+        	/*
+            if (useCurrent) {
+                tab = mTabControl.getCurrentTab();
+                reuseTab(tab, null);
+            } else {
+                mUi.showMaxTabsWarning();
+            }*/
+        	mUi.showMaxTabsWarning();
+        }
+        return tab;
+    }
+
+	@Override
+	public void bookmarkedStatusHasChanged(Tab tab) {
+		// TODO Auto-generated method stub
+        mUi.bookmarkedStatusHasChanged(tab);
+	}
+ 
+	// Helper method for getting the top window.
+    @Override
+    public ContentView getCurrentTopWebView() {
+        return mTabControl.getCurrentTopWebView();
+    }
+    
+    protected void setShouldShowErrorConsole(boolean show) {
+        if (show == mShouldShowErrorConsole) {
+            // Nothing to do.
+            return;
+        }
+        mShouldShowErrorConsole = show;
+        Tab t = mTabControl.getCurrentTab();
+        if (t == null) {
+            // There is no current tab so we cannot toggle the error console
+            return;
+        }
+        mUi.setShouldShowErrorConsole(t, show);
+    }
+    
+    @Override
+    public void createSubWindow(Tab tab) {
+        endActionMode();
+        ContentView mainView = tab.getWebView();
+        ContentView subView = mFactory.createContentView(true);
+        mUi.createSubWindow(tab, subView);
     }
 }

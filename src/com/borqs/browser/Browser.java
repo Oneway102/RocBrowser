@@ -7,6 +7,7 @@ import org.chromium.content.browser.ResourceExtractor;
 
 import android.app.Application;
 import android.util.Log;
+import android.webkit.CookieSyncManager;
 
 public class Browser extends Application { 
 
@@ -39,7 +40,7 @@ public class Browser extends Application {
         initializeApplicationParameters();
 
         // create CookieSyncManager with current Context
-        //CookieSyncManager.createInstance(this);
+        CookieSyncManager.createInstance(this);
         BrowserSettings.initialize(getApplicationContext());
         //Preloader.initialize(getApplicationContext());
     }

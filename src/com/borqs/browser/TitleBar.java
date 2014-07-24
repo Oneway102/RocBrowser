@@ -228,7 +228,14 @@ Context mContext;
         Tab tab = mBaseUi.getActiveTab();
         ContentView webview = tab != null ? tab.getWebView() : null;
 //ww        return webview != null ? ((BrowserContentView)webview).getVisibleTitleHeight() : 0;
-        return webview != null ? 30 : 0;
+        return webview != null ? getTitleHeight() : 0;
+    }
+
+    /*
+     * TODO: 
+     */
+    static int getTitleHeight() {
+        return 104;
     }
 
     /**
