@@ -1,4 +1,4 @@
-RocBrowser
+RocBrowser [DEPRECATED as Chrome for Android is now open-sourced.]
 ==========
 
 Android stock browser based on chromium engine.
